@@ -72,6 +72,12 @@ if __name__ == '__main__':
     print('Evaluating myocardial wall thickness ...')
     os.system('python3 short_axis/eval_wall_thickness.py --data_dir demo_image '
               '--output_csv demo_csv/table_wall_thickness.csv')
+    
+    # Evaluate maximum wall thickness
+    print('Evaluating maximum LV wall thickness ...')
+    os.system('python3 short_axis/eval_max_wall_thickness.py --data_dir demo_image '
+              '--output_csv demo_csv/table_max_wall_thickness.csv')
+          
 
     # Evaluate strain values
 #    if shutil.which('mirtk'):
@@ -117,7 +123,7 @@ if __name__ == '__main__':
               '--model_path trained_model/UNet-LSTM_ao'.format(CUDA_VISIBLE_DEVICES))
 
     # Evaluate aortic areas
-    print('Evaluating atrial areas ...')
+    print('Evaluating aortic areas ...')
     os.system('python3 aortic/eval_aortic_area.py --data_dir demo_image '
               '--pressure_csv demo_csv/blood_pressure_info.csv --output_csv demo_csv/table_aortic_area.csv')
 

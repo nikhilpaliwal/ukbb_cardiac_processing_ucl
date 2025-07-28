@@ -25,6 +25,7 @@ from scipy import interpolate
 import skimage
 from ukbb_cardiac.common.image_utils import *
 
+thr = 15
 
 def approximate_contour(contour, factor=4, smooth=0.05, periodic=False):
     """ Approximate a contour.
@@ -850,9 +851,9 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
     auto_crop_image('{0}/seg_sa_lv_ED.nii.gz'.format(output_dir),
                     '{0}/seg_sa_lv_crop_ED.nii.gz'.format(output_dir), 20)
     os.system('singularity exec mirtk.sif mirtk transform-image {0}/sa.nii.gz {1}/sa_crop.nii.gz '
-              '-target {1}/seg_sa_lv_crop_ED.nii.gz'.format(data_dir, output_dir))
+              '-target {1}/seg_sa_lv_crop_ED.nii.gz -threads thr'.format(data_dir, output_dir))
     os.system('singularity exec mirtk.sif mirtk transform-image {0}/seg_sa.nii.gz {1}/seg_sa_crop.nii.gz '
-              '-target {1}/seg_sa_lv_crop_ED.nii.gz'.format(data_dir, output_dir))
+              '-target {1}/seg_sa_lv_crop_ED.nii.gz -threads thr'.format(data_dir, output_dir))
 
     # Extract the myocardial contours for three slices, respectively basal, mid-cavity and apical
     extract_myocardial_contour('{0}/seg_sa_ED.nii.gz'.format(data_dir),
@@ -888,7 +889,7 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
             source = '{0}/sa_crop_z{1:02d}_fr{2:02d}.nii.gz'.format(output_dir, z, source_fr)
             par = '{0}/ffd_cine_2d_motion.cfg'.format(par_dir)
             dof = '{0}/ffd_z{1:02d}_pair_{2:02d}_to_{3:02d}.dof.gz'.format(output_dir, z, target_fr, source_fr)
-            os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3}'.format(target, source, par, dof))
+            os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3} -threads thr'.format(target, source, par, dof))
 
         # Compose forward inter-frame transformation fields
         os.system('cp {0}/ffd_z{1:02d}_pair_00_to_01.dof.gz '
@@ -900,8 +901,8 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
                 dofs += dof + ' '
             dof_int = '{0}/ffd_z{1:02d}_forward_00_to_{2:02d}_stacked.dof.gz'.format(output_dir, z, fr)
             dof_out = '{0}/ffd_z{1:02d}_forward_00_to_{2:02d}.dof.gz'.format(output_dir, z, fr)
-            os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1}'.format(dofs, dof_int))
-            os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1}'.format(dof_int, dof_out))
+            os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1} -threads thr'.format(dofs, dof_int))
+            os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1} -threads thr'.format(dof_int, dof_out))
 
         # Backward image registration
         for fr in range(T - 1, 0, -1):
@@ -911,7 +912,7 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
             source = '{0}/sa_crop_z{1:02d}_fr{2:02d}.nii.gz'.format(output_dir, z, source_fr)
             par = '{0}/ffd_cine_2d_motion.cfg'.format(par_dir)
             dof = '{0}/ffd_z{1:02d}_pair_{2:02d}_to_{3:02d}.dof.gz'.format(output_dir, z, target_fr, source_fr)
-            os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3}'.format(target, source, par, dof))
+            os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3} -threads thr'.format(target, source, par, dof))
 
         # Compose backward inter-frame transformation fields
         os.system('cp {0}/ffd_z{1:02d}_pair_00_to_{2:02d}.dof.gz '
@@ -924,13 +925,13 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
                 dofs += dof + ' '
             dof_int = '{0}/ffd_z{1:02d}_backward_00_to_{2:02d}_stacked.dof.gz'.format(output_dir, z, fr)
             dof_out = '{0}/ffd_z{1:02d}_backward_00_to_{2:02d}.dof.gz'.format(output_dir, z, fr)
-            os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1}'.format(dofs, dof_int))
-            os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1}'.format(dof_int, dof_out))
+            os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1} -threads thr'.format(dofs, dof_int))
+            os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1} -threads thr'.format(dof_int, dof_out))
 
         # Average the forward and backward transformations
-        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_forward_00_to_00.dof.gz'.format(output_dir, z))
-        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_backward_00_to_00.dof.gz'.format(output_dir, z))
-        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_00_to_00.dof.gz'.format(output_dir, z))
+        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_forward_00_to_00.dof.gz -threads thr'.format(output_dir, z))
+        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_backward_00_to_00.dof.gz -threads thr'.format(output_dir, z))
+        os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_z{1:02d}_00_to_00.dof.gz -threads thr'.format(output_dir, z))
         for fr in range(1, T):
             dof_forward = '{0}/ffd_z{1:02d}_forward_00_to_{2:02d}.dof.gz'.format(output_dir, z, fr)
             weight_forward = float(T - fr) / T
@@ -945,7 +946,7 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
         for fr in range(0, T):
             os.system('singularity exec mirtk.sif mirtk transform-points {0}/myo_contour_ED_z{1:02d}.vtk '
                       '{0}/myo_contour_z{1:02d}_fr{2:02d}.vtk '
-                      '-dofin {0}/ffd_z{1:02d}_00_to_{2:02d}.dof.gz'.format(output_dir, z, fr))
+                      '-dofin {0}/ffd_z{1:02d}_00_to_{2:02d}.dof.gz -threads thr'.format(output_dir, z, fr))
 
         # Transform the segmentation and evaluate the Dice metric
         eval_dice = False
@@ -958,7 +959,7 @@ def cine_2d_sa_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
                 os.system('singularity exec mirtk.sif mirtk transform-image {0}/seg_sa_crop_z{1:02d}_fr{2:02d}.nii.gz '
                           '{0}/seg_sa_crop_warp_ffd_z{1:02d}_fr{2:02d}.nii.gz '
                           '-dofin {0}/ffd_z{1:02d}_00_to_{2:02d}.dof.gz '
-                          '-target {0}/seg_sa_crop_z{1:02d}_fr00.nii.gz'.format(output_dir, z, fr))
+                          '-target {0}/seg_sa_crop_z{1:02d}_fr00.nii.gz -threads thr'.format(output_dir, z, fr))
                 image_A = np.asanyarray(nib.load('{0}/seg_sa_crop_z{1:02d}_fr00.nii.gz'.format(output_dir, z)).dataobj)
                 image_B = np.asanyarray(nib.load('{0}/seg_sa_crop_warp_ffd_z{1:02d}_fr{2:02d}.nii.gz'.format(output_dir, z, fr)).dataobj)
                 dice_lv_myo += [[np_categorical_dice(image_A, image_B, 1),
@@ -1428,9 +1429,9 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
     auto_crop_image('{0}/seg4_la_4ch_lv_ED.nii.gz'.format(output_dir),
                     '{0}/seg4_la_4ch_lv_crop_ED.nii.gz'.format(output_dir), 20)
     os.system('singularity exec mirtk.sif mirtk transform-image {0}/la_4ch.nii.gz {1}/la_4ch_crop.nii.gz '
-              '-target {1}/seg4_la_4ch_lv_crop_ED.nii.gz'.format(data_dir, output_dir))
+              '-target {1}/seg4_la_4ch_lv_crop_ED.nii.gz -threads thr'.format(data_dir, output_dir))
     os.system('singularity exec mirtk.sif mirtk transform-image {0}/seg4_la_4ch.nii.gz {1}/seg4_la_4ch_crop.nii.gz '
-              '-target {1}/seg4_la_4ch_lv_crop_ED.nii.gz'.format(data_dir, output_dir))
+              '-target {1}/seg4_la_4ch_lv_crop_ED.nii.gz -threads thr'.format(data_dir, output_dir))
 
     # Extract the myocardial contour
     extract_la_myocardial_contour('{0}/seg4_la_4ch_ED.nii.gz'.format(data_dir),
@@ -1457,7 +1458,7 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
         source = '{0}/la_4ch_crop_fr{1:02d}.nii.gz'.format(output_dir, source_fr)
         par = '{0}/ffd_cine_la_2d_motion.cfg'.format(par_dir)
         dof = '{0}/ffd_la_4ch_pair_{1:02d}_to_{2:02d}.dof.gz'.format(output_dir, target_fr, source_fr)
-        os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3}'.format(target, source, par, dof))
+        os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3} -threads thr'.format(target, source, par, dof))
 
     # Compose forward inter-frame transformation fields
     os.system('cp {0}/ffd_la_4ch_pair_00_to_01.dof.gz '
@@ -1469,8 +1470,8 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
             dofs += dof + ' '
         dof_int = '{0}/ffd_la_4ch_forward_00_to_{1:02d}_stacked.dof.gz'.format(output_dir, fr)
         dof_out = '{0}/ffd_la_4ch_forward_00_to_{1:02d}.dof.gz'.format(output_dir, fr)
-        os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1}'.format(dofs, dof_int))
-        os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1}'.format(dof_int, dof_out))
+        os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1} -threads thr'.format(dofs, dof_int))
+        os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1} -threads thr'.format(dof_int, dof_out))
 
     # Backward image registration
     for fr in range(T - 1, 0, -1):
@@ -1480,7 +1481,7 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
         source = '{0}/la_4ch_crop_fr{1:02d}.nii.gz'.format(output_dir, source_fr)
         par = '{0}/ffd_cine_la_2d_motion.cfg'.format(par_dir)
         dof = '{0}/ffd_la_4ch_pair_{1:02d}_to_{2:02d}.dof.gz'.format(output_dir, target_fr, source_fr)
-        os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3}'.format(target, source, par, dof))
+        os.system('singularity exec mirtk.sif mirtk register {0} {1} -parin {2} -dofout {3} -threads thr'.format(target, source, par, dof))
 
     # Compose backward inter-frame transformation fields
     os.system('cp {0}/ffd_la_4ch_pair_00_to_{1:02d}.dof.gz '
@@ -1492,13 +1493,13 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
             dofs += dof + ' '
         dof_int = '{0}/ffd_la_4ch_backward_00_to_{1:02d}_stacked.dof.gz'.format(output_dir, fr)
         dof_out = '{0}/ffd_la_4ch_backward_00_to_{1:02d}.dof.gz'.format(output_dir, fr)
-        os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1}'.format(dofs, dof_int))
-        os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1}'.format(dof_int, dof_out))
+        os.system('singularity exec mirtk.sif mirtk compose-dofs {0} {1} -threads thr'.format(dofs, dof_int))
+        os.system('singularity exec mirtk.sif mirtk convert-dof {0} {1} -threads thr'.format(dof_int, dof_out))
 
     # Average the forward and backward transformations
-    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_forward_00_to_00.dof.gz'.format(output_dir))
-    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_backward_00_to_00.dof.gz'.format(output_dir))
-    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_00_to_00.dof.gz'.format(output_dir))
+    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_forward_00_to_00.dof.gz -threads thr'.format(output_dir))
+    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_backward_00_to_00.dof.gz -threads thr'.format(output_dir))
+    os.system('singularity exec mirtk.sif mirtk init-dof {0}/ffd_la_4ch_00_to_00.dof.gz -threads thr'.format(output_dir))
     for fr in range(1, T):
         dof_forward = '{0}/ffd_la_4ch_forward_00_to_{1:02d}.dof.gz'.format(output_dir, fr)
         weight_forward = float(T - fr) / T
@@ -1513,7 +1514,7 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
     for fr in range(0, T):
         os.system('singularity exec mirtk.sif mirtk transform-points {0}/la_4ch_myo_contour_ED.vtk '
                   '{0}/la_4ch_myo_contour_fr{1:02d}.vtk '
-                  '-dofin {0}/ffd_la_4ch_00_to_{1:02d}.dof.gz'.format(output_dir, fr))
+                  '-dofin {0}/ffd_la_4ch_00_to_{1:02d}.dof.gz -threads thr'.format(output_dir, fr))
 
     # Calculate the strain based on the line length
     evaluate_la_strain_by_length('{0}/la_4ch_myo_contour_fr'.format(output_dir),
@@ -1531,7 +1532,7 @@ def cine_2d_la_motion_and_strain_analysis(data_dir, par_dir, output_dir, output_
             os.system('singularity exec mirtk.sif mirtk transform-image {0}/seg4_la_4ch_crop_fr{1:02d}.nii.gz '
                       '{0}/seg4_la_4ch_crop_warp_ffd_fr{1:02d}.nii.gz '
                       '-dofin {0}/ffd_la_4ch_00_to_{1:02d}.dof.gz '
-                      '-target {0}/seg4_la_4ch_crop_fr00.nii.gz'.format(output_dir, fr))
+                      '-target {0}/seg4_la_4ch_crop_fr00.nii.gz -threads thr'.format(output_dir, fr))
             image_A = np.asanyarray(nib.load('{0}/seg4_la_4ch_crop_fr00.nii.gz'.format(output_dir)).dataobj)
             image_B = np.asanyarray(nib.load('{0}/seg4_la_4ch_crop_warp_ffd_fr{1:02d}.nii.gz'.format(output_dir, fr)).dataobj)
             dice_lv_myo += [[np_categorical_dice(image_A, image_B, 1),
