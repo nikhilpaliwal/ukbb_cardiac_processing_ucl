@@ -9,11 +9,11 @@ cardiac imaging data is considered bulk by UKB.
 ## Downloading the cardiac MRI images
 
 The cardiac images have the following codes in the UKB application:
-1. 20208: 
-2. 20209:
-3. 20210:
-4. 20211:
-5. 20212:
+1. 20208:Long axis image 
+2. 20209:Short axis image
+3. 20210:Aortic distensibility image
+4. 20211:Cine image
+5. 20212:LVOT image
 
 To download these images, first we need to identify the EIDs of participants who have these images taken. Take a look at 
 https://biobank.ctsu.ox.ac.uk/~bbdatan/Accessing_UKB_data_v2.3.pdf on instructions to access the UKB data. 
